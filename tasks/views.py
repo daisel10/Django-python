@@ -1,14 +1,44 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth import login, logout, authenticate
 from django.db import IntegrityError
 from django.http import HttpResponse
-
+from .forms import TaskForm
+from .models import Task
 # Create your views here.
 
 def home(request):
     return render(request, 'home.html')
+
+def tasks(request):
+   tasks = Task.objects.filter(user=request.user)
+   
+   return render(request, 'tasks.html',{
+       'tasks':tasks
+   })
+ 
+def create_task(request):
+    if request.method == 'GET':
+        return render(request, 'create_task.html', {
+            'form': TaskForm
+        })
+    if request.method == 'POST':
+        try: 
+            form = TaskForm(request.POST)
+            new_task = form.save(commit=False)
+            new_task.user = request.user
+            new_task.save()
+            return redirect('tasks')
+        except ValueError:
+            return render(request, 'create_task.html', {
+            'form': TaskForm,
+            'error': 'please provide valida data'
+        })
+          
+def task_detail(request, task_id):
+    task= get_object_or_404(Task,pk= task_id)
+    return render(request, 'task_detail.html', { 'task':task})
 
 def signup(request):
     
@@ -40,10 +70,7 @@ def signup(request):
         
         return HttpResponse('password do not match ')
         
-    
-    
-def tasks(request):
-    return render(request, 'tasks.html')
+
 
 def signout(request):
     logout(request)

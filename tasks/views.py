@@ -5,6 +5,7 @@ from django.contrib.auth import login, logout, authenticate
 from django.db import IntegrityError
 from django.http import HttpResponse
 from django.utils import timezone
+from django.contrib.auth.decorators import login_required
 from .forms import TaskForm
 from .models import Task
 # Create your views here.
@@ -13,12 +14,19 @@ def home(request):
     return render(request, 'home.html')
 
 def tasks(request):
-   tasks = Task.objects.filter(user=request.user)
+   tasks = Task.objects.filter(user=request.user, datecompleted_isnull=True)
    
    return render(request, 'tasks.html',{
        'tasks':tasks
    })
- 
+
+@login_required
+def tasks_complete(request):
+    tasks = Task.objects.filter(user=request.user, datecompleted_isnull=False).order_by('-datecompleted')
+    return render(request, 'tasks.html',{
+        'tasks':tasks
+    })
+@login_required
 def create_task(request):
     if request.method == 'GET':
         return render(request, 'create_task.html', {
@@ -36,7 +44,7 @@ def create_task(request):
             'form': TaskForm,
             'error': 'please provide valida data'
         })
-          
+@login_required      
 def task_detail(request, task_id):
     if request.method == 'GET':
         task = get_object_or_404(Task, task_id, user = request.user)
@@ -51,7 +59,8 @@ def task_detail(request, task_id):
             return redirect('tasks')
         except ValueError:
             return render(request, 'task_detail.html', { 'task':task, 'form':form, 'error':"error updating task"})
-        
+
+@login_required    
 def task_complete(request, task_id):
     task = get_object_or_404(Task, task_id, user = request.user)
     if request.method == 'POST':
@@ -59,6 +68,7 @@ def task_complete(request, task_id):
         task.save()
         return redirect('tasks')
 
+@login_required
 def task_delete(request, task_id):
     task = get_object_or_404(Task, task_id, user = request.user)
     if request.method == 'POST':
@@ -96,7 +106,7 @@ def signup(request):
         return HttpResponse('password do not match ')
         
 
-
+@login_required
 def signout(request):
     logout(request)
     return redirect('home')
